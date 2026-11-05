@@ -51,7 +51,7 @@ public:
             return;
 
         auto size = CCDirector::sharedDirector()->getWinSize();
-        int pos = Mod::get()->getSettingValue<int>("position");
+        int pos = Mod::get()->getSettingValue<int64_t>("position");
         float margin = 25.f;
 
         switch (pos) {
@@ -197,7 +197,7 @@ protected:
 
     void updateLabels() {
         bool enabled = Mod::get()->getSettingValue<bool>("enabled");
-        int pos = Mod::get()->getSettingValue<int>("position");
+        int pos = Mod::get()->getSettingValue<int64_t>("position");
 
         m_enabledLabel->setString(enabled ? "ON" : "OFF");
 
@@ -234,14 +234,14 @@ public:
     }
 
     void onPrevious(CCObject*) {
-        int pos = Mod::get()->getSettingValue<int>("position");
-        Mod::get()->setSettingValue<int>("position", (pos + 8) % 9);
+        int pos = Mod::get()->getSettingValue<int64_t>("position");
+        Mod::get()->setSettingValue<int64_t>("position", (pos + 8) % 9);
         updateLabels();
     }
 
     void onNext(CCObject*) {
-        int pos = Mod::get()->getSettingValue<int>("position");
-        Mod::get()->setSettingValue<int>("position", (pos + 1) % 9);
+        int pos = Mod::get()->getSettingValue<int64_t>("position");
+        Mod::get()->setSettingValue<int64_t>("position", (pos + 1) % 9);
         updateLabels();
     }
 };
