@@ -1,8 +1,8 @@
-
 #include <Geode/Geode.hpp>
 #include <Geode/modify/PauseLayer.hpp>
-#include <Geode/modify/PlayLayer.hpp>
 #include <Geode/modify/UILayer.hpp>
+#include <Geode/modify/GJBaseGameLayer.hpp>
+#include <Geode/ui/Popup.hpp>
 
 #include <chrono>
 #include <cmath>
@@ -11,6 +11,8 @@ using namespace geode::prelude;
 using Clock = std::chrono::steady_clock;
 
 static constexpr double TICK_MS = 1000.0 / 240.0;
+
+class TimingDisplayLayer;
 
 static TimingDisplayLayer* s_display = nullptr;
 
@@ -21,12 +23,10 @@ protected:
 public:
     static TimingDisplayLayer* create() {
         auto ret = new TimingDisplayLayer();
-
         if (ret && ret->init()) {
             ret->autorelease();
             return ret;
         }
-
         CC_SAFE_DELETE(ret);
         return nullptr;
     }
@@ -35,18 +35,11 @@ public:
         if (!CCLayer::init())
             return false;
 
-        m_label = CCLabelBMFont::create(
-            "0.00 ms",
-            "bigFont.fnt"
-        );
-
+        m_label = CCLabelBMFont::create("0.00 ms", "bigFont.fnt");
         if (!m_label)
             return false;
 
-        m_label->setScale(
-            Mod::get()->getSettingValue<double>("text-scale")
-        );
-
+        m_label->setScale(Mod::get()->getSettingValue<double>("text-scale"));
         this->addChild(m_label);
 
         updatePosition();
@@ -58,8 +51,7 @@ public:
             return;
 
         auto size = CCDirector::sharedDirector()->getWinSize();
-        int pos = Mod::get()->getSettingValue<int64_t>("position");
-
+        int pos = Mod::get()->getSettingValue<int>("position");
         float margin = 25.f;
 
         switch (pos) {
@@ -99,6 +91,10 @@ public:
                 m_label->setAnchorPoint(ccp(1, 0));
                 m_label->setPosition(ccp(size.width - margin, margin));
                 break;
+            default:
+                m_label->setAnchorPoint(ccp(0.5f, 1));
+                m_label->setPosition(ccp(size.width / 2, size.height - margin));
+                break;
         }
     }
 
@@ -108,22 +104,15 @@ public:
 
         bool enabled = Mod::get()->getSettingValue<bool>("enabled");
         m_label->setVisible(enabled);
-
         if (!enabled)
             return;
 
-        m_label->setScale(
-            Mod::get()->getSettingValue<double>("text-scale")
-        );
-
+        m_label->setScale(Mod::get()->getSettingValue<double>("text-scale"));
         updatePosition();
 
-        m_label->setString(
-            fmt::format("{:+.2f} ms", offset).c_str()
-        );
+        m_label->setString(fmt::format("{:+.2f} ms", offset).c_str());
 
         double absOffset = std::abs(offset);
-
         if (absOffset <= 1.0)
             m_label->setColor(ccc3(0, 255, 0));
         else if (absOffset <= 2.5)
@@ -133,56 +122,42 @@ public:
     }
 };
 
-class OffsetSettingsPopup : public Popup<> {
+class OffsetSettingsPopup : public geode::Popup {
 protected:
     CCLabelBMFont* m_enabledLabel = nullptr;
     CCLabelBMFont* m_positionLabel = nullptr;
 
-    bool setup() override {
+    bool init() {
+        if (!Popup::init(380.f, 240.f))
+            return false;
+
         this->setTitle("Input Offset Timing Display");
 
         auto winSize = this->getContentSize();
 
         auto logo = CCSprite::create("logo.png");
-
         if (logo) {
             logo->setScale(0.25f);
             logo->setPosition(ccp(winSize.width / 2, winSize.height - 40));
             this->addChild(logo);
         }
 
-        auto enabledTitle = CCLabelBMFont::create(
-            "Offset Display",
-            "bigFont.fnt"
-        );
-
+        auto enabledTitle = CCLabelBMFont::create("Offset Display", "bigFont.fnt");
         enabledTitle->setScale(0.45f);
         enabledTitle->setPosition(ccp(winSize.width / 2, winSize.height / 2 + 40));
         this->addChild(enabledTitle);
 
-        m_enabledLabel = CCLabelBMFont::create(
-            "",
-            "bigFont.fnt"
-        );
-
+        m_enabledLabel = CCLabelBMFont::create("", "bigFont.fnt");
         m_enabledLabel->setScale(0.45f);
         m_enabledLabel->setPosition(ccp(winSize.width / 2, winSize.height / 2 + 15));
         this->addChild(m_enabledLabel);
 
-        auto positionTitle = CCLabelBMFont::create(
-            "Display Position",
-            "bigFont.fnt"
-        );
-
+        auto positionTitle = CCLabelBMFont::create("Display Position", "bigFont.fnt");
         positionTitle->setScale(0.45f);
         positionTitle->setPosition(ccp(winSize.width / 2, winSize.height / 2 - 20));
         this->addChild(positionTitle);
 
-        m_positionLabel = CCLabelBMFont::create(
-            "",
-            "bigFont.fnt"
-        );
-
+        m_positionLabel = CCLabelBMFont::create("", "bigFont.fnt");
         m_positionLabel->setScale(0.4f);
         m_positionLabel->setPosition(ccp(winSize.width / 2, winSize.height / 2 - 50));
         this->addChild(m_positionLabel);
@@ -195,7 +170,6 @@ protected:
             this,
             menu_selector(OffsetSettingsPopup::onToggle)
         );
-
         toggle->setPosition(ccp(winSize.width / 2, winSize.height / 2 + 15));
         menu->addChild(toggle);
 
@@ -204,7 +178,6 @@ protected:
             this,
             menu_selector(OffsetSettingsPopup::onPrevious)
         );
-
         left->setPosition(ccp(winSize.width / 2 - 80, winSize.height / 2 - 50));
         menu->addChild(left);
 
@@ -213,7 +186,6 @@ protected:
             this,
             menu_selector(OffsetSettingsPopup::onNext)
         );
-
         right->setPosition(ccp(winSize.width / 2 + 80, winSize.height / 2 - 50));
         menu->addChild(right);
 
@@ -225,7 +197,7 @@ protected:
 
     void updateLabels() {
         bool enabled = Mod::get()->getSettingValue<bool>("enabled");
-        int pos = Mod::get()->getSettingValue<int64_t>("position");
+        int pos = Mod::get()->getSettingValue<int>("position");
 
         m_enabledLabel->setString(enabled ? "ON" : "OFF");
 
@@ -247,46 +219,29 @@ protected:
 public:
     static OffsetSettingsPopup* create() {
         auto ret = new OffsetSettingsPopup();
-
-        if (ret && ret->init(380.f, 240.f)) {
+        if (ret && ret->init()) {
             ret->autorelease();
             return ret;
         }
-
         CC_SAFE_DELETE(ret);
         return nullptr;
     }
 
     void onToggle(CCObject*) {
         bool enabled = Mod::get()->getSettingValue<bool>("enabled");
-
-        Mod::get()->setSettingValue<bool>(
-            "enabled",
-            !enabled
-        );
-
+        Mod::get()->setSettingValue<bool>("enabled", !enabled);
         updateLabels();
     }
 
     void onPrevious(CCObject*) {
-        int pos = Mod::get()->getSettingValue<int64_t>("position");
-
-        Mod::get()->setSettingValue<int>(
-            "position",
-            (pos + 8) % 9
-        );
-
+        int pos = Mod::get()->getSettingValue<int>("position");
+        Mod::get()->setSettingValue<int>("position", (pos + 8) % 9);
         updateLabels();
     }
 
     void onNext(CCObject*) {
-        int pos = Mod::get()->getSettingValue<int64_t>("position");
-
-        Mod::get()->setSettingValue<int>(
-            "position",
-            (pos + 1) % 9
-        );
-
+        int pos = Mod::get()->getSettingValue<int>("position");
+        Mod::get()->setSettingValue<int>("position", (pos + 1) % 9);
         updateLabels();
     }
 };
@@ -297,7 +252,6 @@ class $modify(MyUILayer, UILayer) {
             return false;
 
         s_display = TimingDisplayLayer::create();
-
         if (s_display)
             this->addChild(s_display, 100);
 
@@ -310,7 +264,6 @@ class $modify(MyPauseLayer, PauseLayer) {
         PauseLayer::customSetup();
 
         auto logo = CCSprite::create("logo.png");
-
         if (!logo) {
             log::error("Could not load logo.png");
             return;
@@ -323,17 +276,13 @@ class $modify(MyPauseLayer, PauseLayer) {
             this,
             menu_selector(MyPauseLayer::onOffsetSettings)
         );
-
         button->setID("offset-settings-button");
 
         auto menu = CCMenu::create();
         menu->addChild(button);
 
         auto winSize = CCDirector::sharedDirector()->getWinSize();
-
-        menu->setPosition(
-            ccp(winSize.width / 2, winSize.height / 2 - 100)
-        );
+        menu->setPosition(ccp(winSize.width / 2, winSize.height / 2 - 100));
 
         this->addChild(menu);
     }
@@ -343,11 +292,11 @@ class $modify(MyPauseLayer, PauseLayer) {
     }
 };
 
-class $modify(MyPlayLayer, PlayLayer) {
-    void pushButton(PlayerObject* player, int button, bool isPlayer1) {
-        PlayLayer::pushButton(player, button, isPlayer1);
+class $modify(MyBaseLayer, GJBaseGameLayer) {
+    void handleButton(bool down, int button, bool isPlayer1) {
+        GJBaseGameLayer::handleButton(down, button, isPlayer1);
 
-        if (!s_display)
+        if (!down || !s_display)
             return;
 
         auto now = Clock::now();
@@ -360,13 +309,10 @@ class $modify(MyPlayLayer, PlayLayer) {
             hasTick = true;
         }
 
-        double elapsed = std::chrono::duration<double, std::milli>(
-            now - lastTick
-        ).count();
-
+        double elapsed = std::chrono::duration<double, std::milli>(now - lastTick).count();
         double tickPosition = std::fmod(elapsed, TICK_MS);
 
-        double offset = tickPosition <= TICK_MS / 2.0
+        double offset = (tickPosition <= TICK_MS / 2.0)
             ? -tickPosition
             : TICK_MS - tickPosition;
 
