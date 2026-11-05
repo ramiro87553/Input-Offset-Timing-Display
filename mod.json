@@ -13,3 +13,26 @@
   "description": "A real-time input offset and timing display for Geometry Dash that measures the millisecond difference between your inputs and physics ticks.",
   "repository": "https://github.com/ramiro87553/Input-Offset-Timing-Display"
 }
+
+"settings": {
+    "enabled": {
+        "type": "bool",
+        "name": "Enable Offset Display",
+        "default": true
+    },
+    "position": {
+        "type": "int",
+        "name": "Display Position",
+        "default": 1,
+        "min": 0,
+        "max": 8
+    },
+    "text-scale": {
+        "type": "float",
+        "name": "Text Scale",
+        "default": 0.45,
+        "min": 0.2,
+        "max": 1.0
+    }
+}
+
