@@ -14,9 +14,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build Mod
-        uses: geode-sdk/build-geode-mod@main
+        uses: geode-sdk/build-geode-mod@v1
         with:
-          geode-sdk-version: v5.9.0
+          sdk: v5.9.0
         id: build
 
       - name: Upload Artifact
