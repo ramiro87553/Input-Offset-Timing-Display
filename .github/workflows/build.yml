@@ -9,4 +9,4 @@ on:
 
 jobs:
   build:
-    uses: geode-sdk/geode-actions/build.yml@v2
+    uses: geode-sdk/geode-actions/.github/workflows/build.yml@main
