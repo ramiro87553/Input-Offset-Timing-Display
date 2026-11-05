@@ -1,30 +1,98 @@
-#include <Geode/Geode.hpp>
-#include <Geode/modify/UILayer.hpp>
-#include <Geode/modify/GJBaseGameLayer.hpp>
 
-#include <chrono>
-#include <cmath>
+#include <Geode/Geode.hpp>
+#include <Geode/modify/PauseLayer.hpp>
 
 using namespace geode::prelude;
-using Clock = std::chrono::steady_clock;
 
-static constexpr double TICK_MS = 1000.0 / 240.0;
-
-static Clock::time_point g_lastTick;
-static Clock::time_point g_inputTime;
-
-static bool g_hasTick = false;
-static bool g_hasInput = false;
-
-class TimingDisplayLayer : public CCLayer {
+class OffsetSettingsPopup : public Popup<> {
 protected:
-    CCLabelBMFont* m_label = nullptr;
+    bool setup() override {
+        this->setTitle("Input Offset Timing Display");
+
+        auto winSize = this->getContentSize();
+
+        auto logo = CCSprite::create("logo.png");
+
+        if (logo) {
+            logo->setScale(0.35f);
+            logo->setPosition(
+                ccp(winSize.width / 2, winSize.height - 45)
+            );
+            this->addChild(logo);
+        }
+
+        auto info = CCLabelBMFont::create(
+            "Configure your offset display",
+            "bigFont.fnt"
+        );
+
+        info->setScale(0.4f);
+        info->setPosition(
+            ccp(winSize.width / 2, winSize.height - 90)
+        );
+        this->addChild(info);
+
+        auto enabledLabel = CCLabelBMFont::create(
+            "Enable Offset Display",
+            "bigFont.fnt"
+        );
+
+        enabledLabel->setScale(0.45f);
+        enabledLabel->setPosition(
+            ccp(winSize.width / 2, winSize.height / 2 + 25)
+        );
+        this->addChild(enabledLabel);
+
+        auto toggle = CCMenuItemToggler::create(
+            CCMenuItemSpriteExtra::create(
+                ButtonSprite::create("ON"),
+                nullptr
+            ),
+            CCMenuItemSpriteExtra::create(
+                ButtonSprite::create("OFF"),
+                nullptr
+            )
+        );
+
+        toggle->setPosition(
+            ccp(winSize.width / 2, winSize.height / 2 - 10)
+        );
+
+        auto menu = CCMenu::create();
+        menu->addChild(toggle);
+        menu->setPosition(ccp(0, 0));
+        this->addChild(menu);
+
+        auto positionLabel = CCLabelBMFont::create(
+            "Display Position",
+            "bigFont.fnt"
+        );
+
+        positionLabel->setScale(0.45f);
+        positionLabel->setPosition(
+            ccp(winSize.width / 2, winSize.height / 2 - 55)
+        );
+        this->addChild(positionLabel);
+
+        auto positionValue = CCLabelBMFont::create(
+            "Top Center",
+            "bigFont.fnt"
+        );
+
+        positionValue->setScale(0.4f);
+        positionValue->setPosition(
+            ccp(winSize.width / 2, winSize.height / 2 - 85)
+        );
+        this->addChild(positionValue);
+
+        return true;
+    }
 
 public:
-    static TimingDisplayLayer* create() {
-        auto ret = new TimingDisplayLayer();
+    static OffsetSettingsPopup* create() {
+        auto ret = new OffsetSettingsPopup();
 
-        if (ret && ret->init()) {
+        if (ret && ret->init(360, 240)) {
             ret->autorelease();
             return ret;
         }
@@ -32,93 +100,46 @@ public:
         CC_SAFE_DELETE(ret);
         return nullptr;
     }
+};
 
-    bool init() {
-        if (!CCLayer::init())
-            return false;
+class $modify(MyPauseLayer, PauseLayer) {
+    void customSetup() {
+        PauseLayer::customSetup();
+
+        auto logo = CCSprite::create("logo.png");
+
+        if (!logo) {
+            log::error("Failed to load logo.png");
+            return;
+        }
+
+        logo->setScale(0.30f);
+
+        auto button = CCMenuItemSpriteExtra::create(
+            logo,
+            this,
+            menu_selector(MyPauseLayer::onOffsetSettings)
+        );
+
+        button->setID("offset-settings-button");
+
+        auto menu = CCMenu::create();
+        menu->setID("offset-settings-menu");
+        menu->addChild(button);
 
         auto winSize = CCDirector::sharedDirector()->getWinSize();
 
-        m_label = CCLabelBMFont::create(
-            "0.00 ms",
-            "bigFont.fnt"
+        menu->setPosition(
+            ccp(
+                winSize.width / 2,
+                winSize.height / 2 - 100
+            )
         );
 
-        if (!m_label)
-            return false;
-
-        m_label->setScale(0.45f);
-        m_label->setPosition(
-            ccp(winSize.width / 2, winSize.height - 30)
-        );
-
-        this->addChild(m_label);
-
-        return true;
+        this->addChild(menu);
     }
 
-    void updateOffset(double offset) {
-        if (!m_label)
-            return;
-
-        m_label->setString(
-            fmt::format("{:+.2f} ms", offset).c_str()
-            );
-
-        double absOffset = std::abs(offset);
-
-        if (absOffset <= 1.0) {
-            m_label->setColor(ccc3(0, 255, 0));
-        }
-        else if (absOffset <= 2.5) {
-            m_label->setColor(ccc3(255, 255, 0));
-        }
-        else {
-            m_label->setColor(ccc3(255, 60, 60));
-        }
-    }
-};
-
-static TimingDisplayLayer* s_display = nullptr;
-
-class $modify(MyUILayer, UILayer) {
-    bool init(GJBaseGameLayer* gameLayer) {
-        if (!UILayer::init(gameLayer))
-            return false;
-
-        s_display = TimingDisplayLayer::create();
-
-        if (s_display)
-            this->addChild(s_display, 100);
-
-        return true;
-    }
-};
-
-class $modify(MyBaseGameLayer, GJBaseGameLayer) {
-    void update(float dt) {
-        GJBaseGameLayer::update(dt);
-
-        g_lastTick = Clock::now();
-        g_hasTick = true;
-
-        if (g_hasInput && s_display) {
-            double offset = std::chrono::duration<double, std::milli>(
-                g_inputTime - g_lastTick
-            ).count();
-
-            s_display->updateOffset(offset);
-
-            g_hasInput = false;
-        }
-    }
-
-    void handleButton(bool down, int button, bool player1) {
-        if (down) {
-            g_inputTime = Clock::now();
-            g_hasInput = true;
-        }
-
-        GJBaseGameLayer::handleButton(down, button, player1);
+    void onOffsetSettings(CCObject*) {
+        OffsetSettingsPopup::create()->show();
     }
 };
