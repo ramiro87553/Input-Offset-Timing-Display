@@ -8,7 +8,7 @@
   },
   "id": "ramiro87553.input_offset_timing_display",
   "name": "Input Offset & Timing Display",
-  "version": "v1.0.0",
+  "version": "v1.1.0",
   "developer": "ramiro87553",
   "description": "A real-time input offset and timing display for Geometry Dash that measures the millisecond difference between your inputs and physics ticks.",
   "repository": "https://github.com/ramiro87553/Input-Offset-Timing-Display",
